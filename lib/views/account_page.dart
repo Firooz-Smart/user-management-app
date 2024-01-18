@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:user_management_supabase/main.dart';
+import 'package:user_management_supabase/views/components/avatar.dart';
 import 'package:user_management_supabase/views/login_page.dart';
 
 class AccountPage extends StatefulWidget {
@@ -15,6 +16,8 @@ class _AccountPageState extends State<AccountPage> {
   final _usernameController = TextEditingController();
   final _websiteController = TextEditingController();
   bool loading = true;
+
+  String? _avatarUrl;
 
   @override
   void initState() {
@@ -35,6 +38,9 @@ class _AccountPageState extends State<AccountPage> {
 
       _usernameController.text = (userData['username'] ?? '') as String;
       _websiteController.text = (userData['website'] ?? '') as String;
+
+      print(userData);
+      _avatarUrl = (userData['avatar_url'] ?? '') as String;
     } on PostgrestException catch (e) {
       SnackBar(
         content: Text(e.message),
@@ -118,6 +124,38 @@ class _AccountPageState extends State<AccountPage> {
     }
   }
 
+  Future<void> _onUpload(String imageUrl) async {
+    try {
+      final userId = supabase.auth.currentUser!.id;
+      await supabase.from('profiles').upsert({
+        'id': userId,
+        'avatar_url': imageUrl,
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Your profile updated!')));
+      }
+    } on PostgrestException catch (e) {
+      SnackBar(
+        content: Text(e.message),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      );
+    } catch (e) {
+      SnackBar(
+        content: const Text('Unexpected error occurred'),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      );
+    } finally {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _avatarUrl = imageUrl;
+      });
+    }
+  }
+
   @override
   void dispose() {
     // TODO: implement dispose
@@ -137,6 +175,7 @@ class _AccountPageState extends State<AccountPage> {
           : ListView(
               padding: const EdgeInsets.all(18),
               children: [
+                Avatar(imageUrl: _avatarUrl, onUpload: _onUpload),
                 TextFormField(
                   controller: _usernameController,
                   decoration: const InputDecoration(labelText: 'User Name'),
