@@ -13,7 +13,7 @@ class Avatar extends StatefulWidget {
   });
 
   final String? imageUrl;
-  final void Function(String) onUpload;
+  final void Function(String, String) onUpload;
 
   @override
   _AvatarState createState() => _AvatarState();
@@ -59,7 +59,7 @@ class _AvatarState extends State<Avatar> {
 
       try {
         final bytes = await imageFile.readAsBytes();
-        String? mimeType = await lookupMimeType(imageFile.path);
+        String? mimeType = lookupMimeType(imageFile.path);
         final fileExt = (mimeType!.split('/')[1]);
         final fileName = '${DateTime.now().toIso8601String()}.$fileExt';
         final filePath = fileName;
@@ -71,7 +71,7 @@ class _AvatarState extends State<Avatar> {
             .from('avatars')
             .createSignedUrl(filePath, 60 * 60 * 24 * 365 * 50);
 
-        widget.onUpload(imageUrlResponse);
+        widget.onUpload(imageUrlResponse, fileName);
       } on StorageException catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(

@@ -18,6 +18,7 @@ class _AccountPageState extends State<AccountPage> {
   bool loading = true;
 
   String? _avatarUrl;
+  String? _fileName;
 
   @override
   void initState() {
@@ -41,6 +42,7 @@ class _AccountPageState extends State<AccountPage> {
 
       print(userData);
       _avatarUrl = (userData['avatar_url'] ?? '') as String;
+      _fileName = (userData['file_name'] ?? '') as String;
     } on PostgrestException catch (e) {
       SnackBar(
         content: Text(e.message),
@@ -124,13 +126,26 @@ class _AccountPageState extends State<AccountPage> {
     }
   }
 
-  Future<void> _onUpload(String imageUrl) async {
+  Future<void> _onUpload(String imageUrl, String fileName) async {
     try {
       final userId = supabase.auth.currentUser!.id;
+
+      if (_fileName != null) {
+        await supabase.storage.from('avatars').remove([
+          _fileName!,
+        ]).then((value) {
+          print(value);
+        }).catchError((e) {
+          print(e);
+        });
+      }
+
       await supabase.from('profiles').upsert({
         'id': userId,
         'avatar_url': imageUrl,
+        'file_name': fileName,
       });
+
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Your profile updated!')));
@@ -145,15 +160,15 @@ class _AccountPageState extends State<AccountPage> {
         content: const Text('Unexpected error occurred'),
         backgroundColor: Theme.of(context).colorScheme.error,
       );
-    } finally {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _avatarUrl = imageUrl;
-      });
     }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _avatarUrl = imageUrl;
+    });
   }
 
   @override
@@ -166,6 +181,7 @@ class _AccountPageState extends State<AccountPage> {
 
   @override
   Widget build(BuildContext context) {
+    print(_avatarUrl);
     return Scaffold(
       appBar: AppBar(
         title: Text('Profile'),
